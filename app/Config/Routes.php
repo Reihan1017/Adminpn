@@ -113,7 +113,8 @@ $routes->get('tentang-pengadilan/hapus-kode-etik/(:num)', 'Tentangpengadilan::ha
 $routes->get('layanan-publik', 'Layananpublik::index');
 
 // FOLDER: jamkerja
-$routes->get('layanan-publik/jam-kerja', 'Layananpublik::jamKerja');
+$routes->get('layananpublik/jamKerja', 'Layananpublik::jamKerja');
+$routes->post('layananpublik/jamKerja', 'Layananpublik::jamKerja');
 
 // FOLDER: laporan
 $routes->get('layanan-publik/laporan/akuntabilitas', 'Layananpublik::laporanAkuntabilitas');
@@ -154,8 +155,10 @@ $routes->get('layananpublik/saranaPrasaranaDisabilitas', 'Layananpublik::saranaP
 $routes->post('layananpublik/saranaPrasaranaDisabilitas', 'Layananpublik::saranaPrasaranaDisabilitas');
 
 // FOLDER: pengaduanlayananpublik
-$routes->get('layanan-publik/pengaduan/dasar-hukum', 'Layananpublik::pengaduanDasarHukum');
-$routes->get('layanan-publik/pengaduan/prosedur', 'Layananpublik::pengaduanProsedur');
+$routes->get('layananpublik/dasarHukum', 'Layananpublik::dasarHukum');
+$routes->post('layananpublik/dasarHukum', 'Layananpublik::dasarHukum');
+$routes->get('layananpublik/prosedurPengaduan', 'Layananpublik::prosedurPengaduan');
+$routes->post('layananpublik/prosedurPengaduan', 'Layananpublik::prosedurPengaduan');
 
 // FOLDER: pengumuman
 // Rute untuk Denda Tilang (DIKELOLA OLEH LAYANANPUBLIK)
@@ -171,13 +174,22 @@ $routes->post('layananpublik/simpanDendaTilang', 'Layananpublik::simpanDendaTila
 
 // RUTE YANG HILANG: Tambahkan baris ini untuk MENGHAPUS data
 $routes->get('layananpublik/hapusDendaTilang/(:num)', 'Layananpublik::hapusDendaTilang/$1');
-$routes->get('layanan-publik/pengumuman/lelang-barang', 'Layananpublik::pengumumanLelangBarang');
-$routes->get('layanan-publik/pengumuman/panggilan-gaib', 'Layananpublik::pengumumanPanggilanTdkDiketahui');
+// Routes for Lelang Barang
+$routes->get('layananpublik/lelangBarang', 'Layananpublik::lelangBarang');
+$routes->get('layananpublik/formLelangBarang/(:num?)', 'Layananpublik::formLelangBarang/$1');
+$routes->post('layananpublik/simpanLelangBarang', 'Layananpublik::simpanLelangBarang');
+$routes->get('layananpublik/hapusLelangBarang/(:num)', 'Layananpublik::hapusLelangBarang/$1');
+// Rute untuk Panggilan Tidak Diketahui
+$routes->get('layananpublik/panggilanTdkDiketahui', 'Layananpublik::panggilanTdkDiketahui');
+$routes->get('layananpublik/formPanggilanTdkDiketahui/(:num?)', 'Layananpublik::formPanggilanTdkDiketahui/$1');
+$routes->post('layananpublik/simpanPanggilanTdkDiketahui', 'Layananpublik::simpanPanggilanTdkDiketahui');
+$routes->get('layananpublik/hapusPanggilanTdkDiketahui/(:num)', 'Layananpublik::hapusPanggilanTdkDiketahui/$1');
 $routes->get('layanan-publik/pengumuman/penerimaan-pegawai', 'Layananpublik::pengumumanPenerimaanPegawai');
 $routes->get('layanan-publik/pengumuman/lainnya', 'Layananpublik::pengumumanLainnya');
 
 // FOLDER: prosedurpermohonan
-$routes->get('layanan-publik/prosedur-permohonan', 'Layananpublik::prosedurPermohonan');
+$routes->get('layananpublik/prosedurPermohonanInformasi', 'Layananpublik::prosedurPermohonanInformasi');
+$routes->post('layananpublik/prosedurPermohonanInformasi', 'Layananpublik::prosedurPermohonanInformasi');
 
 // FOLDER: ptsp
 $routes->get('layanan-publik/ptsp', 'Layananpublik::ptsp');

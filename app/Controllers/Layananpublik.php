@@ -2,7 +2,6 @@
 
 namespace App\Controllers;
 
-// PASTIKAN NAMA CLASS ADALAH "Layananpublik"
 class Layananpublik extends BaseController
 {
     protected $db;
@@ -1018,4 +1017,282 @@ public function dendaTilang()
         $this->db->table('denda_tilang')->where('id', $id)->delete();
         return redirect()->back()->with('success', 'Data tilang berhasil dihapus!');
     }
+
+public function panggilanTdkDiketahui()
+{
+    $this->data['current_module']['judul_module'] = 'Manajemen Panggilan Tidak Diketahui';
+    $this->data['panggilan_list'] = $this->db->table('panggilan_tdk_diketahui')
+                                             ->orderBy('urutan', 'ASC')
+                                             ->get()->getResultArray();
+    
+    $this->view('layananpublik/pengumuman/panggilantdkdiketahui.php', $this->data);
+}
+
+/**
+ * Menampilkan form untuk menambah/mengedit panggilan.
+ */
+public function formPanggilanTdkDiketahui($id = null)
+{
+    $this->data['panggilan'] = null;
+    if ($id) {
+        $this->data['panggilan'] = $this->db->table('panggilan_tdk_diketahui')->getWhere(['id' => $id])->getRowArray();
+        $this->data['current_module']['judul_module'] = 'Edit Panggilan Tidak Diketahui';
+    } else {
+        $this->data['current_module']['judul_module'] = 'Tambah Panggilan Tidak Diketahui';
+    }
+    $this->view('layananpublik/pengumuman/form_panggilantdkdiketahui.php', $this->data);
+}
+
+/**
+ * Menyimpan data panggilan.
+ */
+public function simpanPanggilanTdkDiketahui()
+{
+    $id = $this->request->getPost('id');
+    $rules = [
+        'judul_panggilan' => 'required',
+        'file_panggilan'  => 'max_size[file_panggilan,10240]|ext_in[file_panggilan,pdf,jpg,jpeg,png]'
+    ];
+    if (!$id) {
+        $rules['file_panggilan'] = 'uploaded[file_panggilan]|' . $rules['file_panggilan'];
+    }
+
+    if (!$this->validate($rules)) {
+        return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+    }
+
+    $data = [
+        'judul_panggilan' => $this->request->getPost('judul_panggilan'),
+        'deskripsi'       => $this->request->getPost('deskripsi'),
+        'urutan'          => $this->request->getPost('urutan'),
+    ];
+
+    $filePanggilan = $this->request->getFile('file_panggilan');
+    if ($filePanggilan->isValid() && !$filePanggilan->hasMoved()) {
+        $namaFile = $filePanggilan->getRandomName();
+        $filePanggilan->move('uploads/dokumen', $namaFile);
+        $data['file_panggilan'] = $namaFile;
+    }
+
+    if ($id) {
+        $this->db->table('panggilan_tdk_diketahui')->where('id', $id)->update($data);
+    } else {
+        $this->db->table('panggilan_tdk_diketahui')->insert($data);
+    }
+    
+    return redirect()->to('/layananpublik/panggilanTdkDiketahui')->with('success', 'Data panggilan berhasil disimpan!');
+}
+
+/**
+ * Menghapus data panggilan.
+ */
+public function hapusPanggilanTdkDiketahui($id)
+{
+    $panggilan = $this->db->table('panggilan_tdk_diketahui')->getWhere(['id' => $id])->getRow();
+    if ($panggilan) {
+        if (!empty($panggilan->file_panggilan) && file_exists('uploads/dokumen/' . $panggilan->file_panggilan)) {
+            unlink('uploads/dokumen/' . $panggilan->file_panggilan);
+        }
+        $this->db->table('panggilan_tdk_diketahui')->where('id', $id)->delete();
+        return redirect()->back()->with('success', 'Panggilan berhasil dihapus!');
+    }
+    return redirect()->back()->with('errors', 'Data tidak ditemukan!');
+}
+
+// Tambahkan method ini di dalam class Layananpublik
+
+public function jamKerja()
+{
+    // Identifier unik untuk halaman ini
+    $nama_halaman = 'jam-kerja';
+    
+    $this->data['current_module']['judul_module'] = 'Jam Kerja Pelayanan Publik';
+
+    if ($this->request->getMethod() === 'post') {
+        
+        // Aturan validasi: File harus PDF/Gambar, maks 5MB
+        $rules = [
+            'file_upload' => 'max_size[file_upload,5120]|ext_in[file_upload,pdf,jpg,jpeg,png]' 
+        ];
+
+        if ($this->validate($rules)) {
+            $dataUpdate = []; // Mulai dengan array kosong
+
+            // Proses upload file jika ada yang diunggah
+            $fileUpload = $this->request->getFile('file_upload');
+            if ($fileUpload && $fileUpload->isValid() && !$fileUpload->hasMoved()) {
+                
+                // Hapus file lama dari server
+                $oldData = $this->db->table('halaman_profil')->getWhere(['nama_halaman' => $nama_halaman])->getRow();
+                if ($oldData && !empty($oldData->gambar_halaman) && file_exists('uploads/dokumen/' . $oldData->gambar_halaman)) {
+                    unlink('uploads/dokumen/' . $oldData->gambar_halaman);
+                }
+
+                // Simpan file baru ke 'public/uploads/dokumen'
+                $namaFile = $fileUpload->getRandomName();
+                $fileUpload->move('uploads/dokumen', $namaFile);
+                $dataUpdate['gambar_halaman'] = $namaFile; // Simpan nama file baru
+            }
+
+            // Update data di database hanya jika ada perubahan
+            if (!empty($dataUpdate)) {
+                 $this->db->table('halaman_profil')->where('nama_halaman', $nama_halaman)->update($dataUpdate);
+            }
+            
+            session()->setFlashdata('success', 'File Jam Kerja berhasil diperbarui!');
+            return redirect()->to('/layananpublik/jamKerja');
+
+        } else {
+            $this->data['pesan_gagal'] = $this->validator->getErrors();
+        }
+    }
+
+    // Ambil data terbaru dari database
+    $this->data['halaman'] = $this->db->table('halaman_profil')->getWhere(['nama_halaman' => $nama_halaman])->getRowArray();
+
+    // Tampilkan view sesuai path lengkap Anda
+    $this->view('layananpublik/jamkerja/jamkerja.php', $this->data);
+}
+
+// Tambahkan method ini di dalam class Layananpublik
+
+public function prosedurPermohonanInformasi()
+{
+    // Identifier unik untuk halaman ini
+    $nama_halaman = 'prosedur-informasi';
+    
+    $this->data['current_module']['judul_module'] = 'Prosedur Permohonan Informasi';
+
+    if ($this->request->getMethod() === 'post') {
+        
+        $rules = [
+            'isi_halaman' => 'required',
+            'file_upload' => 'max_size[file_upload,5120]|ext_in[file_upload,pdf,jpg,jpeg,png]' // PDF/Gambar, maks 5MB
+        ];
+
+        if ($this->validate($rules)) {
+            $dataUpdate = [
+                'isi_halaman' => $this->request->getPost('isi_halaman')
+            ];
+
+            // Proses upload file jika ada
+            $fileUpload = $this->request->getFile('file_upload');
+            if ($fileUpload && $fileUpload->isValid() && !$fileUpload->hasMoved()) {
+                
+                $oldData = $this->db->table('halaman_profil')->getWhere(['nama_halaman' => $nama_halaman])->getRow();
+                if ($oldData && !empty($oldData->gambar_halaman) && file_exists('uploads/dokumen/' . $oldData->gambar_halaman)) {
+                    unlink('uploads/dokumen/' . $oldData->gambar_halaman);
+                }
+
+                $namaFile = $fileUpload->getRandomName();
+                $fileUpload->move('uploads/dokumen', $namaFile);
+                $dataUpdate['gambar_halaman'] = $namaFile;
+            }
+
+            $this->db->table('halaman_profil')->where('nama_halaman', $nama_halaman)->update($dataUpdate);
+            
+            session()->setFlashdata('success', 'Data Prosedur Permohonan Informasi berhasil diperbarui!');
+            return redirect()->to('/layananpublik/prosedurPermohonanInformasi');
+
+        } else {
+            $this->data['pesan_gagal'] = $this->validator->getErrors();
+        }
+    }
+
+    $this->data['halaman'] = $this->db->table('halaman_profil')->getWhere(['nama_halaman' => $nama_halaman])->getRowArray();
+
+    // Pastikan path view benar
+    $this->view('layananpublik/prosedurpermohonan/prosedurpermohonan.php', $this->data);
+}
+
+// Tambahkan method ini di dalam class Layananpublik
+
+public function dasarHukum()
+{
+    // Identifier unik untuk halaman ini
+    $nama_halaman = 'dasar-hukum-pengaduan';
+    
+    $this->data['current_module']['judul_module'] = 'Dasar Hukum Pengaduan';
+
+    if ($this->request->getMethod() === 'post') {
+        
+        $rules = [ 'isi_halaman' => 'required' ];
+
+        if ($this->validate($rules)) {
+            $dataUpdate = [
+                'isi_halaman' => $this->request->getPost('isi_halaman')
+            ];
+
+            $this->db->table('halaman_profil')->where('nama_halaman', $nama_halaman)->update($dataUpdate);
+            
+            session()->setFlashdata('success', 'Data Dasar Hukum Pengaduan berhasil diperbarui!');
+            return redirect()->to('/layananpublik/dasarHukum');
+
+        } else {
+            $this->data['pesan_gagal'] = $this->validator->getErrors();
+        }
+    }
+
+    $this->data['halaman'] = $this->db->table('halaman_profil')->getWhere(['nama_halaman' => $nama_halaman])->getRowArray();
+
+    // Tampilkan view sesuai path lengkap Anda
+    $this->view('layananpublik/pengaduanlayananpublik/dasarhukum.php', $this->data);
+}
+
+// Tambahkan method ini di dalam class Layananpublik
+
+public function prosedurPengaduan()
+{
+    // Identifier unik untuk teks utama
+    $nama_halaman = 'prosedur-pengaduan';
+    
+    $this->data['current_module']['judul_module'] = 'Prosedur Pengaduan';
+
+    if ($this->request->getMethod() === 'post') {
+        
+        $rules = [
+            'isi_halaman'   => 'required',
+            'pengaduan_url' => 'required|valid_url_strict',
+            'pengaduan_image' => 'max_size[pengaduan_image,1024]|is_image[pengaduan_image]' // Gambar, maks 1MB
+        ];
+
+        if ($this->validate($rules)) {
+            // 1. Simpan Teks Utama
+            $this->db->table('halaman_profil')->where('nama_halaman', $nama_halaman)
+                     ->update(['isi_halaman' => $this->request->getPost('isi_halaman')]);
+            
+            // 2. Simpan URL Tombol
+            $this->db->table('pengaturan_situs')->where('nama_pengaturan', 'pengaduan_url')
+                     ->update(['nilai_pengaturan' => $this->request->getPost('pengaduan_url')]);
+
+            // 3. Proses Upload Gambar Tombol (jika ada)
+            $fileGambar = $this->request->getFile('pengaduan_image');
+            if ($fileGambar && $fileGambar->isValid() && !$fileGambar->hasMoved()) {
+                $oldData = $this->db->table('pengaturan_situs')->getWhere(['nama_pengaturan' => 'pengaduan_image'])->getRow();
+                if ($oldData && !empty($oldData->nilai_pengaturan) && file_exists('uploads/images/' . $oldData->nilai_pengaturan)) {
+                    unlink('uploads/images/' . $oldData->nilai_pengaturan); // Hapus gambar lama
+                }
+                $namaGambar = $fileGambar->getRandomName();
+                $fileGambar->move('uploads/images', $namaGambar); // Simpan ke 'public/uploads/images'
+                $this->db->table('pengaturan_situs')->where('nama_pengaturan', 'pengaduan_image')
+                         ->update(['nilai_pengaturan' => $namaGambar]); // Simpan nama file baru
+            }
+
+            session()->setFlashdata('success', 'Data Prosedur Pengaduan berhasil diperbarui!');
+            return redirect()->to('/layananpublik/prosedurPengaduan');
+
+        } else {
+            $this->data['pesan_gagal'] = $this->validator->getErrors();
+        }
+    }
+
+    // Ambil semua data terbaru untuk ditampilkan di form
+    $this->data['halaman'] = $this->db->table('halaman_profil')->getWhere(['nama_halaman' => $nama_halaman])->getRowArray();
+    $this->data['setting_image'] = $this->db->table('pengaturan_situs')->getWhere(['nama_pengaturan' => 'pengaduan_image'])->getRowArray();
+    $this->data['setting_url'] = $this->db->table('pengaturan_situs')->getWhere(['nama_pengaturan' => 'pengaduan_url'])->getRowArray();
+
+
+    // Tampilkan view sesuai path lengkap Anda
+    $this->view('layananpublik/pengaduanlayananpublik/prosedurpengaduan.php', $this->data);
+}
 }
