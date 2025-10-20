@@ -2,6 +2,10 @@
 
 namespace App\Controllers;
 
+/**
+ * @property \CodeIgniter\HTTP\IncomingRequest $request
+ */
+
 class Reformasibirokrasi extends BaseController
 {
     /**

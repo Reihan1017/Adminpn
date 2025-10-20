@@ -2,6 +2,11 @@
 
 namespace App\Controllers;
 
+/**
+ * @property \CodeIgniter\HTTP\IncomingRequest $request
+ */
+
+
 class Beranda extends BaseController
 {
     /**

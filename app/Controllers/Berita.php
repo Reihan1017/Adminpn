@@ -1,12 +1,11 @@
 <?php
-/**
-*	App Name	: Admin Template Codeigniter 4	
-*	Author		: Agus Prawoto Hadi
-*	Website		: https://jagowebdev.com
-*	Year		: 2020-2023
-*/
 
 namespace App\Controllers;
+
+/**
+ * @property \CodeIgniter\HTTP\IncomingRequest $request
+ */
+
 use App\Models\DataTablesAjaxModel;
 
 class Data_tables_ajax extends \App\Controllers\BaseController

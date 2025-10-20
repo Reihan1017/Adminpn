@@ -43,5 +43,31 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () { $('#dataTable').DataTable(); });
-    // SweetAlert delete confirmation script goes here
+    document.addEventListener('DOMContentLoaded', function () {
+        const deleteButtons = document.querySelectorAll('.btn-hapus');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function (event) {
+                // Hentikan link agar tidak langsung berjalan
+                event.preventDefault(); 
+                const deleteUrl = this.getAttribute('href');
+
+                // Tampilkan konfirmasi
+                Swal.fire({
+                    title: 'Apakah Anda yakin?',
+                    text: "Data yang sudah dihapus tidak dapat dikembalikan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    // Jika dikonfirmasi, lanjutkan ke URL hapus
+                    if (result.isConfirmed) {
+                        window.location.href = deleteUrl;
+                    }
+                });
+            });
+        });
+    });
 </script>
