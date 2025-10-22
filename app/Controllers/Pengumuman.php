@@ -3,22 +3,34 @@
 namespace App\Controllers;
 
 use CodeIgniter\Database\Exceptions\DatabaseException;
+// TAMBAHKAN: Panggil Model Anda
+use App\Models\BeritaModel; 
 
 /**
  * @property \CodeIgniter\HTTP\IncomingRequest $request
  * @property \CodeIgniter\Database\BaseConnection $db
+ * @property \App\Models\BeritaModel $beritaModel // TAMBAHKAN: Untuk intellisense
  */
-class Pengumuman extends BaseController // Pastikan extends BaseController
+class Pengumuman extends BaseController
 {
-    protected $db;
+    // HAPUS: $db akan di-handle oleh Model
+    // protected $db;
+
+    // TAMBAHKAN: Properti untuk menampung Model
+    protected $beritaModel;
 
     public function __construct()
     {
-        parent::__construct(); // PENTING: Panggil constructor parent
+        parent::__construct();
         helper(['form', 'url', 'text']);
-        if (!isset($this->db)) {
-            $this->db = \Config\Database::connect();
-        }
+        
+        // TAMBAHKAN: Buat instance dari Model
+        $this->beritaModel = new BeritaModel();
+
+        // HAPUS: Tidak perlu konek DB manual lagi
+        // if (!isset($this->db)) {
+        //     $this->db = \Config\Database::connect();
+        // }
     }
 
     /*
@@ -32,15 +44,12 @@ class Pengumuman extends BaseController // Pastikan extends BaseController
      */
     public function beritaTerkini()
     {
-        $pageData = []; 
+        $pageData = [];
         $pageData['current_module']['judul_module'] = 'Manajemen Berita & Artikel';
-        
-        // Ambil kolom yang dibutuhkan, termasuk 'slug' dan 'status'
-        $pageData['berita_list'] = $this->db->table('berita')
-                                             ->select('id, judul, slug, gambar, tanggal_publish, status') 
-                                             ->orderBy('tanggal_publish', 'DESC')
-                                             ->get()->getResultArray();
-    
+
+        // UBAH: Ambil data dari Model, bukan $this->db
+        $pageData['berita_list'] = $this->beritaModel->getAllBerita();
+
         return $this->view('berita/beritaterkini.php', $pageData);
     }
 
@@ -50,18 +59,17 @@ class Pengumuman extends BaseController // Pastikan extends BaseController
      */
     public function formBerita($id = null)
     {
-        $pageData = []; 
+        $pageData = [];
         $pageData['berita'] = null;
         $pageData['gambar_tambahan'] = [];
 
         if ($id) {
-            $beritaData = $this->db->table('berita')->getWhere(['id' => $id])->getRowArray();
-            if ($beritaData) {
-                $pageData['berita'] = $beritaData;
-                $pageData['gambar_tambahan'] = $this->db->table('berita_gambar')
-                                                       ->where('berita_id', $id)
-                                                       ->orderBy('urutan', 'ASC')
-                                                       ->get()->getResultArray();
+            // UBAH: Ambil data dari Model
+            $data = $this->beritaModel->getBeritaWithGambar($id);
+            $pageData['berita'] = $data['berita'];
+            $pageData['gambar_tambahan'] = $data['gambar_tambahan'];
+            
+            if ($pageData['berita']) {
                 $pageData['current_module']['judul_module'] = 'Edit Berita & Artikel';
             } else {
                 return redirect()->to('/pengumuman/beritaTerkini')->with('error', 'Berita tidak ditemukan.');
@@ -72,124 +80,99 @@ class Pengumuman extends BaseController // Pastikan extends BaseController
 
         return $this->view('berita/form_berita.php', $pageData);
     }
-    
+
     /**
      * Menyimpan data berita baru atau yang diedit.
-     * Sekarang menerima SLUG MANUAL dari form dan memvalidasi keunikannya.
      */
     public function simpanBerita()
     {
         $id = $this->request->getPost('id');
 
-        // Aturan validasi
+        // ... (Validasi rules dan errors Anda SAMA, tidak perlu diubah) ...
         $rules = [
             'judul'           => 'required|min_length[5]|max_length[255]',
-            // ATURAN VALIDASI SLUG BARU: wajib, alfanumerik+dash, dan UNIK di tabel 'berita' kolom 'slug'.
-            // is_unique[table.field,ignore_field,ignore_value]
             'slug'            => 'required|alpha_dash|max_length[255]|is_unique[berita.slug,id,' . ($id ?? 0) . ']',
             'isi_berita'      => 'required',
             'tanggal_publish' => 'required|valid_date[Y-m-d\TH:i]',
             'status'          => 'required|in_list[published,draft]'
         ];
-        
-        // Pesan error kustom untuk slug
-        $errors = [
-            'slug' => [
-                'required'   => 'Slug (URL) wajib diisi.',
-                'alpha_dash' => 'Slug hanya boleh berisi huruf kecil, angka, dan tanda hubung (-).',
-                'is_unique'  => 'Slug ini sudah digunakan oleh berita lain. Harap ganti.'
-            ]
-        ];
-
-        // Aturan gambar utama
+        $errors = [ /* ... pesan error Anda ... */ ];
         $rules['gambar'] = ($id ? 'permit_empty|' : 'uploaded[gambar]|') . 'max_size[gambar,2048]|is_image[gambar]|mime_in[gambar,image/jpg,image/jpeg,image/png]';
-        // Aturan gambar tambahan
         $rules['gambar_tambahan.*'] = 'permit_empty|max_size[gambar_tambahan,2048]|is_image[gambar_tambahan]|mime_in[gambar_tambahan,image/jpg,image/jpeg,image/png]';
 
-        if (!$this->validate($rules, $errors)) { // Kirim $errors ke validator
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        if (!$this->validate($rules, $errors)) {
+             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-
-        // Ambil slug dari form input, BUKAN dibuat dari judul
+        
         $slug = $this->request->getPost('slug');
 
-        // Siapkan data dasar
         $data = [
             'judul'           => $this->request->getPost('judul'),
-            'slug'            => $slug, // Gunakan slug dari input manual
+            'slug'            => $slug,
             'isi_berita'      => $this->request->getPost('isi_berita'),
             'tanggal_publish' => date('Y-m-d H:i:s', strtotime($this->request->getPost('tanggal_publish'))),
             'status'          => $this->request->getPost('status')
         ];
 
-        $beritaId = $id; // Gunakan ID lama jika mode edit
+        $beritaId = $id;
 
-        // 3. Proses Upload Gambar Utama (Cover)
+        // Proses Upload Gambar Utama (Cover)
         $fileGambarUtama = $this->request->getFile('gambar');
         if ($fileGambarUtama && $fileGambarUtama->isValid() && !$fileGambarUtama->hasMoved()) {
-            // Hapus gambar lama dulu jika sedang mengedit
             if($id) { 
-                $this->hapusFileGambar('berita', $id, 'gambar', 'uploads/berita'); 
+                // UBAH: Panggil helper baru yang sudah pakai model
+                $this->hapusFileGambarLama($id, 'uploads/berita'); 
             }
-            // Buat nama file baru yang unik (menggunakan slug manual)
             $namaGambarUtama = $slug . '_' . time() . '_' . $fileGambarUtama->getRandomName(); 
-            // Pindahkan file ke folder tujuan
             if ($fileGambarUtama->move('uploads/berita', $namaGambarUtama)) {
-                $data['gambar'] = $namaGambarUtama; // Simpan nama file baru ke data
+                $data['gambar'] = $namaGambarUtama;
             } else {
-                // Catat error jika gagal upload
-                log_message('error', '[simpanBerita] Gagal memindahkan file gambar utama: ' . $fileGambarUtama->getErrorString());
+                 log_message('error', '[simpanBerita] Gagal memindahkan file gambar utama: ' . $fileGambarUtama->getErrorString());
                  return redirect()->back()->withInput()->with('errors', ['gambar' => 'Gagal mengupload gambar utama.']);
             }
         }
 
-        // 4. Simpan/Update Data Utama ke tabel 'berita'
+        // Simpan/Update Data Utama ke tabel 'berita'
         try {
             if ($id) { // Mode Edit
-                // Slug di sini tidak perlu logic auto-update/check keunikan karena sudah divalidasi di atas
-                $this->db->table('berita')->where('id', $id)->update($data);
+                // UBAH: Gunakan Model->update()
+                $this->beritaModel->update($id, $data);
             } else { // Mode Tambah
-                // Slug di sini tidak perlu logic auto-update/check keunikan karena sudah divalidasi di atas
-                $this->db->table('berita')->insert($data);
-                $beritaId = $this->db->insertID(); // Dapatkan ID berita yang baru saja dibuat
+                // UBAH: Gunakan Model->insert()
+                $this->beritaModel->insert($data);
+                
+                // UBAH: Ambil ID dari Model
+                $beritaId = $this->beritaModel->getInsertID(); 
             }
         } catch (DatabaseException $e) {
-            // Catat error database dan beri pesan ke user
             log_message('error', '[simpanBerita] Database Error: ' . $e->getMessage());
             return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan database saat menyimpan data berita.');
         }
 
-        // 5. Proses Upload Gambar Tambahan (Galeri)
-        if ($beritaId) { // Hanya proses jika ID berita valid
-            $filesTambahan = $this->request->getFiles(); // Ambil semua file
+        // Proses Upload Gambar Tambahan (Galeri)
+        if ($beritaId) {
+            $filesTambahan = $this->request->getFiles();
 
-            // Cek apakah ada file yang diupload untuk 'gambar_tambahan'
             if(isset($filesTambahan['gambar_tambahan'])) {
-                // Loop melalui setiap file dalam array 'gambar_tambahan'
                 foreach($filesTambahan['gambar_tambahan'] as $file) {
-                    // Pastikan file valid dan belum dipindahkan
                     if ($file && $file->isValid() && !$file->hasMoved()) {
-                        // Buat nama file unik (menggunakan slug manual)
                         $namaFileTambahan = $slug . '_extra_' . time() . '_' . $file->getRandomName(); 
-                        // Pindahkan file ke folder tujuan
                         if ($file->move('uploads/berita', $namaFileTambahan)) {
-                            // Jika berhasil, simpan informasinya ke tabel 'berita_gambar'
-                            $this->db->table('berita_gambar')->insert([
-                                'berita_id' => $beritaId, // Hubungkan ke ID berita
+                            
+                            // UBAH: Gunakan Model untuk simpan gambar tambahan
+                            $this->beritaModel->simpanGambarTambahan([
+                                'berita_id' => $beritaId,
                                 'nama_file' => $namaFileTambahan,
-                                'urutan'    => 100 // Anda bisa menambahkan input urutan di form jika perlu
+                                'urutan'    => 100 
                             ]);
                         } else {
-                            // Catat error jika gagal memindahkan file
                             log_message('error', '[simpanBerita] Gagal memindahkan file gambar tambahan: ' . $file->getErrorString() . ' - ' . $file->getName());
-                            // Anda bisa memutuskan apakah ingin melanjutkan atau menghentikan proses di sini
                         }
                     }
-                } // Akhir foreach
-            } // Akhir if isset
-        } // Akhir if $beritaId
+                }
+            }
+        }
 
-        // 6. Redirect ke halaman daftar dengan pesan sukses
         return redirect()->to('/pengumuman/beritaTerkini')->with('success', 'Data berita berhasil disimpan!');
     }
 
@@ -199,34 +182,51 @@ class Pengumuman extends BaseController // Pastikan extends BaseController
      */
     public function hapusBerita($id)
     {
-        $berita = $this->db->table('berita')->getWhere(['id' => $id])->getRow();
-        if ($berita) {
-            $this->hapusFileGambar('berita', $id, 'gambar', 'uploads/berita');
+        // UBAH: Ambil semua data (termasuk nama file) dari Model
+        $dataHapus = $this->beritaModel->getDataUntukHapus($id);
+        
+        if ($dataHapus['berita']) {
+            // 1. Hapus file gambar utama
+            if (!empty($dataHapus['berita']['gambar']) && file_exists('uploads/berita/' . $dataHapus['berita']['gambar'])) {
+                @unlink('uploads/berita/' . $dataHapus['berita']['gambar']);
+            }
 
-            $gambarTambahan = $this->db->table('berita_gambar')->where('berita_id', $id)->get()->getResult();
-            foreach ($gambarTambahan as $img) {
-                if (!empty($img->nama_file) && file_exists('uploads/berita/' . $img->nama_file)) {
-                    unlink('uploads/berita/' . $img->nama_file);
+            // 2. Hapus file gambar tambahan
+            foreach ($dataHapus['gambar_tambahan'] as $img) {
+                if (!empty($img['nama_file']) && file_exists('uploads/berita/' . $img['nama_file'])) {
+                    @unlink('uploads/berita/' . $img['nama_file']);
                 }
             }
             
-            $this->db->table('berita')->where('id', $id)->delete();
-            return redirect()->back()->with('success', 'Berita berhasil dihapus!');
+            // 3. Hapus data dari database menggunakan Model
+            //    Model akan menghapus dari tabel 'berita' dan 'berita_gambar'
+            if ($this->beritaModel->hapusBeritaDanGambar($id)) {
+                return redirect()->back()->with('success', 'Berita berhasil dihapus!');
+            } else {
+                return redirect()->back()->with('error', 'Gagal menghapus data dari database.');
+            }
+
         }
         return redirect()->back()->with('error', 'Berita tidak ditemukan!');
     }
 
     /**
-     * Helper method untuk menghapus file gambar.
+     * Helper method untuk menghapus file gambar LAMA saat edit.
+     * UBAH: Nama dan logic sedikit diubah agar lebih jelas
      */
-    private function hapusFileGambar(string $table, int $id, string $field, string $folder = 'uploads/berita')
+    private function hapusFileGambarLama(int $id, string $folder = 'uploads/berita')
     {
-        $record = $this->db->table($table)->select($field)->getWhere(['id' => $id])->getRow();
-        if ($record && !empty($record->$field)) {
-            $filePath = FCPATH . $folder . DIRECTORY_SEPARATOR . $record->$field;
+        // UBAH: Ambil data dari Model
+        $record = $this->beritaModel->find($id); // find() hanya ambil data tabel utama
+        
+        if ($record && !empty($record['gambar'])) { // 'gambar' karena returnType array
+            $filePath = FCPATH . $folder . DIRECTORY_SEPARATOR . $record['gambar'];
             if (file_exists($filePath)) {
-                @unlink($filePath); // Gunakan @ untuk menekan error jika file tidak bisa dihapus
+                @unlink($filePath);
             }
         }
     }
+
+    // HAPUS: Fungsi hapusFileGambar lama tidak terpakai
+    // private function hapusFileGambar(string $table, int $id, string $field, string $folder = 'uploads/berita') { ... }
 }

@@ -1,73 +1,132 @@
-<?php namespace App\Models;
+<?php
+
+namespace App\Models;
 
 use CodeIgniter\Model;
 
 class BeritaModel extends Model
 {
-    protected $table = 'konten_dinamis';
+    // Nama tabel utama
+    protected $table = 'berita';
+
+    // Primary key tabel
     protected $primaryKey = 'id';
+
+    // Mengizinkan CI4 untuk menangani insert/update
+    // Ini adalah kolom-kolom yang BOLEH diisi/diubah
     protected $allowedFields = [
-        'jenis_konten', 'judul', 'slug', 'isi_konten', 
-        'gambar_cover', 'tgl_publikasi', 'id_user', 'status'
+        'judul',
+        'slug',
+        'isi_berita',
+        'gambar',
+        'tanggal_publish',
+        'status'
     ];
 
-    // Digunakan untuk Data Tables Ajax: Tentukan kolom yang bisa di-search
-    protected $column_search = [
-        'judul', 'jenis_konten', 'tgl_publikasi'
-    ]; 
-    
-    // Digunakan untuk Data Tables Ajax: Tentukan kolom untuk sorting
-    protected $order = [
-        'id' => 'desc'
-    ];
+    // Tipe data yang dikembalikan (array) agar konsisten dengan controller Anda
+    protected $returnType = 'array';
 
-    // Method untuk Data Tables Ajax (logika filtering dan sorting)
-    public function datatablesQuery()
+    // Kita tidak pakai auto-timestamps (created_at, updated_at)
+    // karena Anda mengelola 'tanggal_publish' secara manual
+    protected $useTimestamps = false;
+
+    /**
+     * Mengambil semua berita untuk halaman daftar admin.
+     * (Menggantikan logic di beritaTerkini())
+     */
+    public function getAllBerita()
     {
-        $this->builder = $this->db->table($this->table);
-        $i = 0;
+        return $this->select('id, judul, slug, gambar, tanggal_publish, status')
+                    ->orderBy('tanggal_publish', 'DESC')
+                    ->findAll(); // findAll() adalah fungsi Model CI4
+    }
+
+    /**
+     * Mengambil satu data berita BESERTA gambar tambahannya.
+     * (Menggantikan logic di formBerita())
+     *
+     * @param int $id ID Berita
+     * @return array Data 'berita' dan 'gambar_tambahan'
+     */
+    public function getBeritaWithGambar($id)
+    {
+        $data = [];
         
-        // Logika Searching
-        foreach ($this->column_search as $item) {
-            if ($_POST['search']['value']) {
-                if ($i === 0) {
-                    $this->builder->groupStart();
-                    $this->builder->like($item, $_POST['search']['value']);
-                } else {
-                    $this->builder->orLike($item, $_POST['search']['value']);
-                }
+        // 1. Ambil data berita utama
+        // find($id) adalah fungsi Model CI4 untuk get data by primary key
+        $data['berita'] = $this->find($id);
 
-                if (count($this->column_search) - 1 == $i)
-                    $this->builder->groupEnd();
-            }
-            $i++;
+        // 2. Jika berita ditemukan, cari gambar tambahannya
+        if ($data['berita']) {
+            $data['gambar_tambahan'] = $this->db->table('berita_gambar')
+                                              ->where('berita_id', $id)
+                                              ->orderBy('urutan', 'ASC')
+                                              ->get()
+                                              ->getResultArray();
+        } else {
+            $data['gambar_tambahan'] = [];
         }
 
-        // Logika Sorting
-        if (isset($_POST['order'])) {
-            $this->builder->orderBy($this->column_order[$_POST['order']['0']['column']], $_POST['order']['0']['dir']);
-        } else if (isset($this->order)) {
-            $order = $this->order;
-            $this->builder->orderBy(key($order), $order[key($order)]);
+        return $data;
+    }
+
+    /**
+     * Menyimpan data gambar tambahan ke tabel 'berita_gambar'.
+     * (Menggantikan logic di simpanBerita())
+     *
+     * @param array $data Data gambar (berita_id, nama_file, urutan)
+     * @return bool
+     */
+    public function simpanGambarTambahan($data)
+    {
+        return $this->db->table('berita_gambar')->insert($data);
+    }
+
+    /**
+     * Mengambil data berita dan gambar tambahan untuk dihapus.
+     * (Dipakai di controller hapusBerita() untuk dapat nama file)
+     *
+     * @param int $id ID Berita
+     * @return array Data 'berita' dan 'gambar_tambahan'
+     */
+    public function getDataUntukHapus($id)
+    {
+        $data = [];
+        $data['berita'] = $this->find($id);
+        $data['gambar_tambahan'] = [];
+
+        if ($data['berita']) {
+             $data['gambar_tambahan'] = $this->db->table('berita_gambar')
+                                               ->where('berita_id', $id)
+                                               ->get()
+                                               ->getResultArray();
         }
+        return $data;
     }
 
-    public function getDatatables()
+    /**
+     * Menghapus berita dan semua gambar tambahan terkait (transaksional).
+     * (Menggantikan logic di hapusBerita())
+     *
+     * @param int $id ID Berita
+     * @return bool Status transaksi
+     */
+    public function hapusBeritaDanGambar($id)
     {
-        $this->datatablesQuery();
-        if ($_POST['length'] != -1)
-            $this->builder->limit($_POST['length'], $_POST['start']);
-        return $this->builder->get()->getResult();
-    }
+        // Mulai transaksi database
+        $this->db->transStart();
 
-    public function countFiltered()
-    {
-        $this->datatablesQuery();
-        return $this->builder->countAllResults();
-    }
+        // 1. Hapus dari tabel 'berita_gambar'
+        $this->db->table('berita_gambar')->where('berita_id', $id)->delete();
+        
+        // 2. Hapus dari tabel 'berita'
+        // delete($id) adalah fungsi Model CI4 untuk hapus by primary key
+        $this->delete($id);
 
-    public function countAll()
-    {
-        return $this->db->table($this->table)->countAllResults();
+        // Selesaikan transaksi
+        $this->db->transComplete();
+
+        // Kembalikan status sukses/gagalnya transaksi
+        return $this->db->transStatus();
     }
 }

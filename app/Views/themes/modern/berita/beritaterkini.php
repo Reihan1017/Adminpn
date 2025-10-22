@@ -15,7 +15,7 @@
     <div class="card-header bg-white py-3">
         <div class="row align-items-center">
             <div class="col">
-                <h5 class="card-title mb-0 text-primary"><i class="fas fa-newspaper mr-2"></i>Manajemen Berita & Artikel</h5>
+                <h5 class="card-title mb-0 text-primary"><i class="fas fa-newspaper mr-2"></i>Manajemen Berita</h5>
             </div>
             <div class="col-auto">
                 <a href="<?= site_url('pengumuman/formBerita') ?>" class="btn btn-success rounded-pill">
