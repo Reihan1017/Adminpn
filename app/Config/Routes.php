@@ -286,7 +286,17 @@ $routes->get('layanan-hukum/prosedur-pidana/praperadilan', 'Layananhukum::praper
 //======================================================================
 // ROUTES UNTUK CONTROLLER BERITA
 //======================================================================
-$routes->get('berita/terkini', 'Pengumuman::beritaTerkini');
+// Rute untuk Berita Terkini (dikelola oleh Controller Pengumuman)
+// Rute untuk Manajemen Berita (di backend admin)
+$routes->group('pengumuman', function($routes){
+    $routes->get('beritaTerkini', 'Pengumuman::beritaTerkini');
+    $routes->get('formBerita/(:num?)', 'Pengumuman::formBerita/$1');
+    $routes->post('simpanBerita', 'Pengumuman::simpanBerita');
+    $routes->get('hapusBerita/(:num)', 'Pengumuman::hapusBerita/$1');
+});
+
+// Anda juga perlu rute untuk API upload gambar TinyMCE
+$routes->post('api/uploadImage', 'Api::uploadImage'); // Pastikan controller Api dan method uploadImage ada
 $routes->get('berita/pengumuman', 'Pengumuman::pengumuman');
 
 //======================================================================

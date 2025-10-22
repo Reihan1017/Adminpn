@@ -270,17 +270,33 @@ class BaseController extends Controller
 		exit;
 	}
 	
-	protected function view($file, $data = false, $file_only = false) 
+	protected function view($file, $data = [], $file_only = false) // Beri default array kosong
 	{
+		// PASTIKAN BARIS INI ADA DAN BENAR: Menggabungkan data base dan data spesifik method
+		$viewData = array_merge($this->data, $data); 
+	
+		// Muat header, view, dan footer MENGGUNAKAN $viewData
+		echo view('themes/modern/header.php', $viewData); 
+	
 		if (is_array($file)) {
 			foreach ($file as $file_item) {
-				echo view($file_item, $data);
+				// Logika untuk memuat multiple view
+				if (strpos($file_item, 'themes/modern/') !== 0) {
+					 echo view('themes/modern/' . $file_item, $viewData);
+				} else {
+					 echo view($file_item, $viewData);
+				}
 			}
 		} else {
-			echo view('themes/modern/header.php', $data);
-			echo view('themes/modern/' . $file, $data);
-			echo view('themes/modern/footer.php');
+			// Logika untuk memuat single view
+			if (strpos($file, 'themes/modern/') !== 0) {
+				 echo view('themes/modern/' . $file, $viewData);
+			} else {
+				 echo view($file, $viewData);
+			}
 		}
+		
+		echo view('themes/modern/footer.php', $viewData); 
 	}
 	
 	protected function loginRequired() 
@@ -508,4 +524,5 @@ class BaseController extends Controller
 		}
 		$this->view('error-data-notfound.php', $data);
 	}
+
 }

@@ -509,7 +509,8 @@ function build_menu( $current_module, $arr_menu, $submenu = false)
 		
 		// class attribute for <li>
 		$class_li = [];		
-		if ($current_module['nama_module'] == $val['nama_module']) {
+// Tambahkan pengecekan apakah 'nama_module' ada di $current_module
+if (isset($current_module['nama_module']) && $current_module['nama_module'] == $val['nama_module']) {
 			$class_li[] = 'tree-open';
 		}
 		

@@ -16,7 +16,7 @@ if (empty($_SESSION['user'])) {
 <html lang="en" data-bs-theme="<?=$theme_mode?>">
 <head>
 <title><?=$current_module['judul_module']?> | <?=$settingAplikasi['judul_web']?></title>
-<meta name="descrition" content="<?=$current_module['deskripsi']?>"/>
+<meta name="description" content="<?= esc($current_module['deskripsi'] ?? $site_desc) ?>"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="<?=$config->baseURL . 'public/images/favicon.png?r='.time()?>" />
 <link rel="stylesheet" type="text/css" href="<?=$config->baseURL . 'public/vendors/fontawesome/css/all.css'?>"/>
