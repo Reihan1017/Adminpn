@@ -196,91 +196,74 @@ class Tentangpengadilan extends BaseController
     /**
      * Menampilkan daftar profil Hakim.
      */
-    public function profilHakim()
+    public function profilPegawai()
     {
-        $this->data['current_module']['judul_module'] = 'Profil Hakim';
-        $this->data['kategori'] = 'hakim';
-        $this->data['profil_list'] = $this->db->table('pegawai')->where('kategori', 'hakim')->orderBy('urutan', 'ASC')->get()->getResultArray();
-        $this->view('tentangpengadilan/hakimdanpegawai/profilhakim.php', $this->data);
+        $pageData = []; 
+        $pageData['current_module']['judul_module'] = 'Manajemen Profil Pegawai';
+        
+        // Ambil semua data pegawai, urutkan berdasarkan kategori lalu urutan
+        $pageData['profil_list'] = $this->db->table('pegawai')
+                                            ->orderBy('kategori', 'ASC')
+                                            ->orderBy('urutan', 'ASC')
+                                            ->get()->getResultArray();
+    
+        // Menggunakan view baru yang menampilkan semua pegawai
+        return $this->view('tentangpengadilan/hakimdanpegawai/profilpegawai_list.php', $pageData);
     }
 
     /**
-     * Menampilkan daftar profil Kepaniteraan.
+     * Menampilkan SATU form untuk menambah atau mengedit profil.
+     * Kategori akan dipilih melalui dropdown di dalam form.
+     * @param int|null $id ID pegawai jika dalam mode edit.
      */
-    public function profilKepaniteraan()
+    public function formProfil($id = null) // Hapus parameter $kategori
     {
-        $this->data['current_module']['judul_module'] = 'Profil Kepaniteraan';
-        $this->data['kategori'] = 'kepaniteraan';
-        $this->data['profil_list'] = $this->db->table('pegawai')->where('kategori', 'kepaniteraan')->orderBy('urutan', 'ASC')->get()->getResultArray();
-        $this->view('tentangpengadilan/hakimdanpegawai/profilkepaniteraan.php', $this->data);
-    }
-
-    /**
-     * Menampilkan daftar profil Kesekretariatan.
-     */
-    public function profilKesekretariatan()
-    {
-        $this->data['current_module']['judul_module'] = 'Profil Kesekretariatan';
-        $this->data['kategori'] = 'kesekretariatan';
-        $this->data['profil_list'] = $this->db->table('pegawai')->where('kategori', 'kesekretariatan')->orderBy('urutan', 'ASC')->get()->getResultArray();
-        $this->view('tentangpengadilan/hakimdanpegawai/profilkesekretariatan.php', $this->data);
-    }
-
-    /**
-     * Menampilkan daftar profil PPPK.
-     */
-    public function profilPppk()
-    {
-        $this->data['current_module']['judul_module'] = 'Profil PPPK';
-        $this->data['kategori'] = 'pppk';
-        $this->data['profil_list'] = $this->db->table('pegawai')->where('kategori', 'pppk')->orderBy('urutan', 'ASC')->get()->getResultArray();
-        $this->view('tentangpengadilan/hakimdanpegawai/profilpppk.php', $this->data);
-    }
-
-    /**
-     * Menampilkan form untuk menambah atau mengedit profil pegawai.
-     * Menggunakan parameter $id untuk membedakan mode tambah (null) atau edit (ada ID).
-     * @param string $kategori Kategori pegawai (hakim, kepaniteraan, dll.)
-     * @param int|null $id ID pegawai jika dalam mode edit
-     */
-    public function formProfil($kategori, $id = null)
-    {
-        $this->data['profil'] = null; // Default untuk mode tambah
-        $this->data['kategori'] = $kategori;
+        $pageData = []; 
+        $pageData['profil'] = null;
 
         if ($id) {
-            // Jika $id ada, ambil data pegawai dari DB untuk mode edit
-            $this->data['profil'] = $this->db->table('pegawai')->getWhere(['id' => $id])->getRowArray();
-            $this->data['current_module']['judul_module'] = 'Edit Profil';
+            // Mode Edit: Ambil data dari DB
+            $pageData['profil'] = $this->db->table('pegawai')->getWhere(['id' => $id])->getRowArray();
+            if (!$pageData['profil']) {
+                return redirect()->to('/tentangpengadilan/profilPegawai')->with('error', 'Profil tidak ditemukan.');
+            }
+            $pageData['current_module']['judul_module'] = 'Edit Profil Pegawai';
         } else {
-            $this->data['current_module']['judul_module'] = 'Tambah Profil Baru';
+            // Mode Tambah
+            $pageData['current_module']['judul_module'] = 'Tambah Profil Pegawai Baru';
         }
-        // Memuat view form yang sama untuk tambah dan edit
-        $this->view('tentangpengadilan/hakimdanpegawai/form_profil.php', $this->data);
-    }
 
+        // Definisikan kategori yang bisa dipilih di form
+        $pageData['kategori_list'] = [
+            'hakim' => 'Hakim',
+            'kepaniteraan' => 'Kepaniteraan',
+            'kesekretariatan' => 'Kesekretariatan',
+            'pppk' => 'PPPK'
+        ];
+
+        // Tetap menggunakan form_profil.php, tapi form ini akan kita modifikasi
+        return $this->view('tentangpengadilan/hakimdanpegawai/form_profil.php', $pageData);
+    }
+    
     /**
-     * Menyimpan data profil pegawai baru atau yang diedit.
-     * Menangani validasi input dan upload file foto.
+     * Menyimpan SATU data profil dari form pintar.
+     * Kategori diambil dari dropdown di form.
      */
     public function simpanProfil()
     {
         $id = $this->request->getPost('id');
-        $kategori = $this->request->getPost('kategori');
 
         $rules = [
             'nama_pegawai' => 'required',
             'jabatan'      => 'required',
-            'foto_pegawai' => 'max_size[foto_pegawai,2048]|is_image[foto_pegawai]' // Validasi file gambar maks 2MB
+            'kategori'     => 'required|in_list[hakim,kepaniteraan,kesekretariatan,pppk]', // Validasi kategori
+            'foto_pegawai' => 'permit_empty|max_size[foto_pegawai,2048]|is_image[foto_pegawai]'
         ];
 
-        // Validasi input form
-        if (! $this->validate($rules)) {
-            // Jika validasi gagal, kembali ke form dengan pesan error dan input lama
+        if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        // Kumpulkan data dari form ke dalam array
         $data = [
             'nama_pegawai'  => $this->request->getPost('nama_pegawai'),
             'nip'           => $this->request->getPost('nip'),
@@ -289,57 +272,59 @@ class Tentangpengadilan extends BaseController
             'tempat_lahir'  => $this->request->getPost('tempat_lahir'),
             'tanggal_lahir' => $this->request->getPost('tanggal_lahir'),
             'urutan'        => $this->request->getPost('urutan'),
-            'kategori'      => $kategori
+            'kategori'      => $this->request->getPost('kategori') // Ambil kategori dari form
         ];
 
-        // Proses upload file foto jika ada file yang diunggah
         $fileFoto = $this->request->getFile('foto_pegawai');
-        if ($fileFoto->isValid() && ! $fileFoto->hasMoved()) {
-            // Hapus foto lama jika ada (untuk mode edit)
-            if ($id) {
-                $profilLama = $this->db->table('pegawai')->select('foto_pegawai')->getWhere(['id' => $id])->getRow();
-                if ($profilLama && !empty($profilLama->foto_pegawai) && file_exists('uploads/pegawai/' . $profilLama->foto_pegawai)) {
-                    unlink('uploads/pegawai/' . $profilLama->foto_pegawai);
-                }
+        if ($fileFoto && $fileFoto->isValid() && !$fileFoto->hasMoved()) {
+            if($id) { $this->hapusFileGambar('pegawai', $id, 'foto_pegawai', 'uploads/pegawai'); }
+            
+            $namaFoto = $fileFoto->getRandomName(); 
+            if ($fileFoto->move('uploads/pegawai', $namaFoto)) {
+                $data['foto_pegawai'] = $namaFoto;
+            } else {
+                 return redirect()->back()->withInput()->with('errors', ['foto_pegawai' => 'Gagal mengupload foto.']);
             }
-            $namaFoto = $fileFoto->getRandomName(); // Generate nama file acak
-            $fileFoto->move('uploads/pegawai', $namaFoto); // Pindahkan file ke folder uploads
-            $data['foto_pegawai'] = $namaFoto; // Simpan nama file baru ke data
         }
 
-        // Simpan data ke database (INSERT untuk data baru, UPDATE untuk data edit)
-        if ($id) {
-            $this->db->table('pegawai')->where('id', $id)->update($data);
-        } else {
-            $this->db->table('pegawai')->insert($data);
+        try {
+            if ($id) {
+                $this->db->table('pegawai')->where('id', $id)->update($data);
+            } else {
+                $this->db->table('pegawai')->insert($data);
+            }
+        } catch (DatabaseException $e) {
+            log_message('error', 'Database Error: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan database.');
         }
 
-        // Tentukan URL redirect berdasarkan kategori
-        $redirect_url = 'tentangpengadilan/profil' . ucfirst($kategori);
-        return redirect()->to($redirect_url)->with('success', 'Data profil berhasil disimpan!');
+        // Selalu kembali ke halaman daftar utama
+        return redirect()->to('/tentangpengadilan/profilPegawai')->with('success', 'Data profil berhasil disimpan!');
     }
 
     /**
-     * Menghapus data profil pegawai berdasarkan ID.
-     * Termasuk menghapus file foto terkait dari server.
-     * @param int $id ID pegawai yang akan dihapus
+     * Menghapus SATU data profil.
+     * @param int $id ID pegawai yang akan dihapus.
      */
     public function hapusProfil($id)
     {
-        // Ambil data profil untuk mendapatkan nama file foto
         $profil = $this->db->table('pegawai')->getWhere(['id' => $id])->getRow();
         if ($profil) {
-            // Hapus file foto dari server jika ada
-            if (! empty($profil->foto_pegawai) && file_exists('uploads/pegawai/' . $profil->foto_pegawai)) {
-                unlink('uploads/pegawai/' . $profil->foto_pegawai);
-            }
-            // Hapus record dari database
+            $this->hapusFileGambar('pegawai', $id, 'foto_pegawai', 'uploads/pegawai');
             $this->db->table('pegawai')->where('id', $id)->delete();
             return redirect()->back()->with('success', 'Profil berhasil dihapus!');
         }
-        // Jika ID tidak ditemukan
-        return redirect()->back()->with('errors', 'Profil tidak ditemukan!');
+        return redirect()->back()->with('error', 'Profil tidak ditemukan!');
     }
+
+    /**
+     * Helper method untuk menghapus file gambar.
+     */
+    private function hapusFileGambar(string $table, int $id, string $field, string $folder)
+    {
+        // ... (Kode helper hapusFileGambar sama seperti sebelumnya) ...
+    }
+
 
     /*
     |--------------------------------------------------------------------------

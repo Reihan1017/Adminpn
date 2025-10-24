@@ -1,11 +1,7 @@
 <?php if(session()->getFlashdata('errors')): ?>
     <div class="alert alert-danger shadow-sm">
         <strong>Gagal menyimpan!</strong>
-        <ul>
-            <?php foreach (session()->getFlashdata('errors') as $error) : ?>
-                <li><?= esc($error) ?></li>
-            <?php endforeach ?>
-        </ul>
+        <ul><?php foreach (session()->getFlashdata('errors') as $error) : ?><li><?= esc($error) ?></li><?php endforeach ?></ul>
     </div>
 <?php endif; ?>
 
@@ -17,8 +13,6 @@
         <form action="<?= site_url('tentangpengadilan/simpanProfil') ?>" method="post" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $profil['id'] ?? '' ?>">
-            <input type="hidden" name="kategori" value="<?= $kategori ?>">
-
             <div class="form-row">
                 <div class="form-group col-md-8">
                     <label class="font-weight-bold">Nama Lengkap</label>
@@ -42,7 +36,7 @@
             </div>
 
             <div class="form-row">
-                 <div class="form-group col-md-6">
+                <div class="form-group col-md-6">
                     <label class="font-weight-bold">Tempat Lahir</label>
                     <input type="text" name="tempat_lahir" class="form-control" value="<?= old('tempat_lahir', $profil['tempat_lahir'] ?? '') ?>">
                 </div>
@@ -52,10 +46,23 @@
                 </div>
             </div>
 
-             <div class="form-group">
-                <label class="font-weight-bold">Urutan Tampil</label>
-                <input type="number" name="urutan" class="form-control" value="<?= old('urutan', $profil['urutan'] ?? '100') ?>" style="width: 120px;">
-                <small class="form-text text-muted">Angka lebih kecil akan tampil lebih dulu.</small>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label class="font-weight-bold" for="kategori">Kategori Pegawai <span class="text-danger">*</span></label>
+                    <select class="form-control" id="kategori" name="kategori" required>
+                        <option value="">-- Pilih Kategori --</option>
+                        <?php foreach($kategori_list as $key => $value): ?>
+                            <option value="<?= esc($key) ?>" <?= (old('kategori', $profil['kategori'] ?? '') == $key) ? 'selected' : '' ?>>
+                                <?= esc($value) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label class="font-weight-bold">Urutan Tampil</label>
+                    <input type="number" name="urutan" class="form-control" value="<?= old('urutan', $profil['urutan'] ?? '100') ?>" style="width: 120px;">
+                    <small class="form-text text-muted">Angka lebih kecil akan tampil lebih dulu.</small>
+                </div>
             </div>
 
             <hr>
@@ -75,7 +82,7 @@
             <hr>
 
             <button type="submit" class="btn btn-primary">Simpan Profil</button>
-            <a href="<?= site_url('tentangpengadilan/profil' . ucfirst($kategori)) ?>" class="btn btn-secondary">Batal</a>
+            <a href="<?= site_url('tentangpengadilan/profilPegawai') ?>" class="btn btn-secondary">Batal</a>
         </form>
     </div>
 </div>

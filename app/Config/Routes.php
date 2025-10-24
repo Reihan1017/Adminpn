@@ -27,7 +27,8 @@ $routes->post('artikel/upload-image', 'Artikel::uploadImage');
 //======================================================================
 // ROUTES UNTUK CONTROLLER BERANDA PENGADILAN
 //======================================================================
-$routes->get('beranda/beranda',                                'Beranda::Beranda');
+$routes->group('beranda', function($routes){
+});
 
 //======================================================================
 // ROUTES UNTUK CONTROLLER TENTANG PENGADILAN (LENGKAP)
@@ -71,14 +72,15 @@ $routes->get('tentang-pengadilan/form-agen-perubahan/(:num?)',  'Tentangpengadil
 $routes->post('tentang-pengadilan/simpan-agen-perubahan',      'Tentangpengadilan::simpanAgenPerubahan');
 $routes->get('tentang-pengadilan/hapus-agen-perubahan/(:num)', 'Tentangpengadilan::hapusAgenPerubahan/$1');
 
-// --- PROFIL HAKIM DAN PEGAWAI (CRUD) ---
-$routes->get('tentang-pengadilan/profilhakim',                 'Tentangpengadilan::profilHakim');
-$routes->get('tentang-pengadilan/profilkepaniteraan',          'Tentangpengadilan::profilKepaniteraan');
-$routes->get('tentang-pengadilan/profilkesekretariatan',       'Tentangpengadilan::profilKesekretariatan');
-$routes->get('tentang-pengadilan/profilpppk',                  'Tentangpengadilan::profilPppk');
-$routes->get('tentang-pengadilan/form-profil/(:segment)/(:num?)','Tentangpengadilan::formProfil/$1/$2'); // Untuk form tambah/edit
-$routes->post('tentang-pengadilan/simpan-profil',              'Tentangpengadilan::simpanProfil'); // Untuk menyimpan
-$routes->get('tentang-pengadilan/hapus-profil/(:num)',         'Tentangpengadilan::hapusProfil/$1'); // Untuk menghapus
+
+$routes->group('tentangpengadilan', function($routes) {
+    // Rute Terpusat untuk Profil Pegawai
+    $routes->get('profilPegawai', 'Tentangpengadilan::profilPegawai');
+    $routes->get('formProfil', 'Tentangpengadilan::formProfil'); // Form Tambah
+    $routes->get('formProfil/(:num)', 'Tentangpengadilan::formProfil/$1'); // Form Edit
+    $routes->post('simpanProfil', 'Tentangpengadilan::simpanProfil');
+    $routes->get('hapusProfil/(:num)', 'Tentangpengadilan::hapusProfil/$1');
+});
 
 // --- HALAMAN LINK EKSTERNAL ---
 $routes->get('tentang-pengadilan/jdih',                        'Tentangpengadilan::jdihPnCiamis');

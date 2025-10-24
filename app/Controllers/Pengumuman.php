@@ -96,31 +96,69 @@ class Pengumuman extends BaseController
             'tanggal_publish' => 'required|valid_date[Y-m-d\TH:i]',
             'status'          => 'required|in_list[published,draft]'
         ];
-        $errors = [ /* ... pesan error Anda ... */ ];
+        
+        // Ambil pesan error kustom Anda dari controller sebelumnya jika ada
+        $errors = [
+             'slug' => [
+                 'required'   => 'Slug (URL) wajib diisi.',
+                 'alpha_dash' => 'Slug hanya boleh berisi huruf kecil, angka, dan tanda hubung (-).',
+                 'is_unique'  => 'Slug ini sudah digunakan oleh berita lain. Harap ganti.'
+             ]
+        ];
+        
         $rules['gambar'] = ($id ? 'permit_empty|' : 'uploaded[gambar]|') . 'max_size[gambar,2048]|is_image[gambar]|mime_in[gambar,image/jpg,image/jpeg,image/png]';
         $rules['gambar_tambahan.*'] = 'permit_empty|max_size[gambar_tambahan,2048]|is_image[gambar_tambahan]|mime_in[gambar_tambahan,image/jpg,image/jpeg,image/png]';
 
-        if (!$this->validate($rules, $errors)) {
+        if (!$this->validate($rules, $errors)) { // Pastikan $errors dimasukkan
              return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        
-        $slug = $this->request->getPost('slug');
 
+        // --- MULAI LOGIKA BARU UNTUK TANGGAL ---
+
+        $slug = $this->request->getPost('slug');
+        $new_status = $this->request->getPost('status'); // <-- Ambil status baru dari form
+
+        // Siapkan data dasar
         $data = [
             'judul'           => $this->request->getPost('judul'),
             'slug'            => $slug,
             'isi_berita'      => $this->request->getPost('isi_berita'),
-            'tanggal_publish' => date('Y-m-d H:i:s', strtotime($this->request->getPost('tanggal_publish'))),
-            'status'          => $this->request->getPost('status')
+            // 'tanggal_publish' akan kita tentukan di bawah
+            'status'          => $new_status
         ];
+
+        if ($id) { // Mode Edit (Update)
+            // 1. Dapatkan status LAMA dari database
+            $beritaLama = $this->beritaModel->find($id);
+            $old_status = $beritaLama['status'] ?? 'draft'; // Ambil status lama
+
+            // 2. Cek transisi dari 'draft' ke 'published'
+            if ($old_status === 'draft' && $new_status === 'published') {
+                // INI LOGIKA UTAMANYA:
+                // Jika status berubah dari draft ke publish, set tanggal ke SEKARANG.
+                $data['tanggal_publish'] = date('Y-m-d H:i:s'); // Waktu SEKARANG
+            } else {
+                // Jika tidak (misal: draft -> draft, publish -> publish, publish -> draft),
+                // biarkan tanggal publish dari inputan form (memungkinkan re-schedule).
+                $data['tanggal_publish'] = date('Y-m-d H:i:s', strtotime($this->request->getPost('tanggal_publish')));
+            }
+        } else { // Mode Tambah (Create)
+            // Post baru, selalu ambil dari form.
+            // Jika status 'published', ini jadi waktu publish.
+            // Jika status 'draft', ini jadi waktu publish yang *direncanakan*.
+            $data['tanggal_publish'] = date('Y-m-d H:i:s', strtotime($this->request->getPost('tanggal_publish')));
+        }
+
+        // --- SELESAI LOGIKA BARU UNTUK TANGGAL ---
+
 
         $beritaId = $id;
 
         // Proses Upload Gambar Utama (Cover)
+        // ... (Kode upload gambar Anda SAMA PERSIS, tidak perlu diubah) ...
         $fileGambarUtama = $this->request->getFile('gambar');
         if ($fileGambarUtama && $fileGambarUtama->isValid() && !$fileGambarUtama->hasMoved()) {
             if($id) { 
-                // UBAH: Panggil helper baru yang sudah pakai model
                 $this->hapusFileGambarLama($id, 'uploads/berita'); 
             }
             $namaGambarUtama = $slug . '_' . time() . '_' . $fileGambarUtama->getRandomName(); 
@@ -135,13 +173,9 @@ class Pengumuman extends BaseController
         // Simpan/Update Data Utama ke tabel 'berita'
         try {
             if ($id) { // Mode Edit
-                // UBAH: Gunakan Model->update()
                 $this->beritaModel->update($id, $data);
             } else { // Mode Tambah
-                // UBAH: Gunakan Model->insert()
                 $this->beritaModel->insert($data);
-                
-                // UBAH: Ambil ID dari Model
                 $beritaId = $this->beritaModel->getInsertID(); 
             }
         } catch (DatabaseException $e) {
@@ -150,6 +184,7 @@ class Pengumuman extends BaseController
         }
 
         // Proses Upload Gambar Tambahan (Galeri)
+        // ... (Kode upload gambar tambahan Anda SAMA PERSIS, tidak perlu diubah) ...
         if ($beritaId) {
             $filesTambahan = $this->request->getFiles();
 
@@ -159,7 +194,6 @@ class Pengumuman extends BaseController
                         $namaFileTambahan = $slug . '_extra_' . time() . '_' . $file->getRandomName(); 
                         if ($file->move('uploads/berita', $namaFileTambahan)) {
                             
-                            // UBAH: Gunakan Model untuk simpan gambar tambahan
                             $this->beritaModel->simpanGambarTambahan([
                                 'berita_id' => $beritaId,
                                 'nama_file' => $namaFileTambahan,
