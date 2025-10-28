@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use CodeIgniter\Database\Exceptions\DatabaseException;
-// TAMBAHKAN: Panggil Model Anda
+use App\Models\PengumumanModel; 
 use App\Models\BeritaModel; 
 
 /**
@@ -13,6 +13,10 @@ use App\Models\BeritaModel;
  */
 class Pengumuman extends BaseController
 {
+
+    protected $pengumumanModel;
+    protected $uploadPathGambar;
+    protected $uploadPathPdf;
     // HAPUS: $db akan di-handle oleh Model
     // protected $db;
 
@@ -26,241 +30,168 @@ class Pengumuman extends BaseController
         
         // TAMBAHKAN: Buat instance dari Model
         $this->beritaModel = new BeritaModel();
-
-        // HAPUS: Tidak perlu konek DB manual lagi
-        // if (!isset($this->db)) {
-        //     $this->db = \Config\Database::connect();
-        // }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | MANAJEMEN BERITA (CRUD - Dinamis)
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Menampilkan daftar berita di halaman admin.
-     */
-    public function beritaTerkini()
-    {
-        $pageData = [];
-        $pageData['current_module']['judul_module'] = 'Manajemen Berita & Artikel';
-
-        // UBAH: Ambil data dari Model, bukan $this->db
-        $pageData['berita_list'] = $this->beritaModel->getAllBerita();
-
-        return $this->view('berita/beritaterkini.php', $pageData);
-    }
-
-    /**
-     * Menampilkan form untuk menambah atau mengedit berita.
-     * @param int|null $id ID berita jika dalam mode edit.
-     */
-    public function formBerita($id = null)
-    {
-        $pageData = [];
-        $pageData['berita'] = null;
-        $pageData['gambar_tambahan'] = [];
-
-        if ($id) {
-            // UBAH: Ambil data dari Model
-            $data = $this->beritaModel->getBeritaWithGambar($id);
-            $pageData['berita'] = $data['berita'];
-            $pageData['gambar_tambahan'] = $data['gambar_tambahan'];
-            
-            if ($pageData['berita']) {
-                $pageData['current_module']['judul_module'] = 'Edit Berita & Artikel';
-            } else {
-                return redirect()->to('/pengumuman/beritaTerkini')->with('error', 'Berita tidak ditemukan.');
-            }
-        } else {
-            $pageData['current_module']['judul_module'] = 'Tambah Berita & Artikel Baru';
+        $this->pengumumanModel = new PengumumanModel();
+        
+        // Buat path upload
+        $this->uploadPathGambar = ROOTPATH . 'public/uploads/pengumuman/gambar/';
+        $this->uploadPathPdf = ROOTPATH . 'public/uploads/pengumuman/pdf/';
+        
+        // Buat direktori jika belum ada
+        if (!is_dir($this->uploadPathGambar)) {
+            mkdir($this->uploadPathGambar, 0777, true);
+        }
+        if (!is_dir($this->uploadPathPdf)) {
+            mkdir($this->uploadPathPdf, 0777, true);
         }
 
-        return $this->view('berita/form_berita.php', $pageData);
+        // JS untuk editor teks (Tidak berubah)
+        $this->addJs($this->config->baseURL . 'public/vendors/tinymce/tinymce.js');
+        $this->addJs($this->config->baseURL . 'public/themes/modern/js/halamanstatis.js?r=' . time());
     }
 
-    /**
-     * Menyimpan data berita baru atau yang diedit.
-     */
-    public function simpanBerita()
+    public function index()
     {
-        $id = $this->request->getPost('id');
+        $data = $this->data;
+        $data['title'] = 'Daftar Pengumuman';
+        // 5. Ganti pemanggilan data
+        $data['pengumuman'] = $this->pengumumanModel->getAllPengumuman(); 
 
-        // ... (Validasi rules dan errors Anda SAMA, tidak perlu diubah) ...
-        $rules = [
-            'judul'           => 'required|min_length[5]|max_length[255]',
-            'slug'            => 'required|alpha_dash|max_length[255]|is_unique[berita.slug,id,' . ($id ?? 0) . ']',
-            'isi_berita'      => 'required',
-            'tanggal_publish' => 'required|valid_date[Y-m-d\TH:i]',
-            'status'          => 'required|in_list[published,draft]'
-        ];
-        
-        // Ambil pesan error kustom Anda dari controller sebelumnya jika ada
-        $errors = [
-             'slug' => [
-                 'required'   => 'Slug (URL) wajib diisi.',
-                 'alpha_dash' => 'Slug hanya boleh berisi huruf kecil, angka, dan tanda hubung (-).',
-                 'is_unique'  => 'Slug ini sudah digunakan oleh berita lain. Harap ganti.'
-             ]
-        ];
-        
-        $rules['gambar'] = ($id ? 'permit_empty|' : 'uploaded[gambar]|') . 'max_size[gambar,2048]|is_image[gambar]|mime_in[gambar,image/jpg,image/jpeg,image/png]';
-        $rules['gambar_tambahan.*'] = 'permit_empty|max_size[gambar_tambahan,2048]|is_image[gambar_tambahan]|mime_in[gambar_tambahan,image/jpg,image/jpeg,image/png]';
-
-        if (!$this->validate($rules, $errors)) { // Pastikan $errors dimasukkan
-             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        if (session()->getFlashdata('message')) {
+            $data['message'] = session()->getFlashdata('message');
         }
 
-        // --- MULAI LOGIKA BARU UNTUK TANGGAL ---
+        // 6. Ganti path view
+        return $this->view('pengumuman/pengumuman-result', $data);
+    }
 
-        $slug = $this->request->getPost('slug');
-        $new_status = $this->request->getPost('status'); // <-- Ambil status baru dari form
+    public function create()
+    {
+        $data = $this->data;
+        $data['title'] = 'Tambah Pengumuman';
+        
+        // 7. Hapus logika 'parent_id'
+        // $data['halaman_list'] sudah dihapus
 
-        // Siapkan data dasar
+        // 8. Ganti path view
+        return $this->view('pengumuman/pengumuman-form', $data);
+    }
+
+    public function store()
+    {
+        $slug = url_title($this->request->getPost('judul'), '-', true);
         $data = [
-            'judul'           => $this->request->getPost('judul'),
-            'slug'            => $slug,
-            'isi_berita'      => $this->request->getPost('isi_berita'),
-            // 'tanggal_publish' akan kita tentukan di bawah
-            'status'          => $new_status
+            'judul' => $this->request->getPost('judul'),
+            'slug' => $slug,
+            'konten' => $this->request->getPost('konten'),
+            'status' => $this->request->getPost('status') ?: 'publish',
+            // 'parent_id' dan 'urutan' dihapus
+            // 'tgl_terbit' dihapus (kita pakai created_at)
         ];
 
-        if ($id) { // Mode Edit (Update)
-            // 1. Dapatkan status LAMA dari database
-            $beritaLama = $this->beritaModel->find($id);
-            $old_status = $beritaLama['status'] ?? 'draft'; // Ambil status lama
-
-            // 2. Cek transisi dari 'draft' ke 'published'
-            if ($old_status === 'draft' && $new_status === 'published') {
-                // INI LOGIKA UTAMANYA:
-                // Jika status berubah dari draft ke publish, set tanggal ke SEKARANG.
-                $data['tanggal_publish'] = date('Y-m-d H:i:s'); // Waktu SEKARANG
-            } else {
-                // Jika tidak (misal: draft -> draft, publish -> publish, publish -> draft),
-                // biarkan tanggal publish dari inputan form (memungkinkan re-schedule).
-                $data['tanggal_publish'] = date('Y-m-d H:i:s', strtotime($this->request->getPost('tanggal_publish')));
-            }
-        } else { // Mode Tambah (Create)
-            // Post baru, selalu ambil dari form.
-            // Jika status 'published', ini jadi waktu publish.
-            // Jika status 'draft', ini jadi waktu publish yang *direncanakan*.
-            $data['tanggal_publish'] = date('Y-m-d H:i:s', strtotime($this->request->getPost('tanggal_publish')));
+        // 9. Handle Upload Gambar
+        $gambarFile = $this->request->getFile('gambar');
+        if ($gambarFile && $gambarFile->isValid() && !$gambarFile->hasMoved()) {
+            $gambarName = $gambarFile->getRandomName();
+            $gambarFile->move($this->uploadPathGambar, $gambarName);
+            $data['gambar'] = $gambarName;
+        }
+        
+        // 10. Handle Upload PDF
+        $pdfFile = $this->request->getFile('file_pdf');
+        if ($pdfFile && $pdfFile->isValid() && !$pdfFile->hasMoved()) {
+            $pdfName = $pdfFile->getRandomName(); // Boleh juga pakai nama asli: $pdfFile->getName()
+            $pdfFile->move($this->uploadPathPdf, $pdfName);
+            $data['file_pdf'] = $pdfName;
         }
 
-        // --- SELESAI LOGIKA BARU UNTUK TANGGAL ---
+        // 11. Simpan ke Database
+        $this->pengumumanModel->save($data);
 
-
-        $beritaId = $id;
-
-        // Proses Upload Gambar Utama (Cover)
-        // ... (Kode upload gambar Anda SAMA PERSIS, tidak perlu diubah) ...
-        $fileGambarUtama = $this->request->getFile('gambar');
-        if ($fileGambarUtama && $fileGambarUtama->isValid() && !$fileGambarUtama->hasMoved()) {
-            if($id) { 
-                $this->hapusFileGambarLama($id, 'uploads/berita'); 
-            }
-            $namaGambarUtama = $slug . '_' . time() . '_' . $fileGambarUtama->getRandomName(); 
-            if ($fileGambarUtama->move('uploads/berita', $namaGambarUtama)) {
-                $data['gambar'] = $namaGambarUtama;
-            } else {
-                 log_message('error', '[simpanBerita] Gagal memindahkan file gambar utama: ' . $fileGambarUtama->getErrorString());
-                 return redirect()->back()->withInput()->with('errors', ['gambar' => 'Gagal mengupload gambar utama.']);
-            }
-        }
-
-        // Simpan/Update Data Utama ke tabel 'berita'
-        try {
-            if ($id) { // Mode Edit
-                $this->beritaModel->update($id, $data);
-            } else { // Mode Tambah
-                $this->beritaModel->insert($data);
-                $beritaId = $this->beritaModel->getInsertID(); 
-            }
-        } catch (DatabaseException $e) {
-            log_message('error', '[simpanBerita] Database Error: ' . $e->getMessage());
-            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan database saat menyimpan data berita.');
-        }
-
-        // Proses Upload Gambar Tambahan (Galeri)
-        // ... (Kode upload gambar tambahan Anda SAMA PERSIS, tidak perlu diubah) ...
-        if ($beritaId) {
-            $filesTambahan = $this->request->getFiles();
-
-            if(isset($filesTambahan['gambar_tambahan'])) {
-                foreach($filesTambahan['gambar_tambahan'] as $file) {
-                    if ($file && $file->isValid() && !$file->hasMoved()) {
-                        $namaFileTambahan = $slug . '_extra_' . time() . '_' . $file->getRandomName(); 
-                        if ($file->move('uploads/berita', $namaFileTambahan)) {
-                            
-                            $this->beritaModel->simpanGambarTambahan([
-                                'berita_id' => $beritaId,
-                                'nama_file' => $namaFileTambahan,
-                                'urutan'    => 100 
-                            ]);
-                        } else {
-                            log_message('error', '[simpanBerita] Gagal memindahkan file gambar tambahan: ' . $file->getErrorString() . ' - ' . $file->getName());
-                        }
-                    }
-                }
-            }
-        }
-
-        return redirect()->to('/pengumuman/beritaTerkini')->with('success', 'Data berita berhasil disimpan!');
+        return redirect()->to(base_url('pengumuman'))->with('message', ['status' => 'ok', 'message' => 'Pengumuman berhasil ditambahkan']);
     }
 
-    /**
-     * Menghapus data berita berdasarkan ID.
-     * @param int $id ID berita yang akan dihapus.
-     */
-    public function hapusBerita($id)
+    public function edit($id)
     {
-        // UBAH: Ambil semua data (termasuk nama file) dari Model
-        $dataHapus = $this->beritaModel->getDataUntukHapus($id);
+        $data = $this->data;
+        $pengumuman = $this->pengumumanModel->getById($id);
+        if (!$pengumuman) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Pengumuman tidak ditemukan');
+        }
         
-        if ($dataHapus['berita']) {
-            // 1. Hapus file gambar utama
-            if (!empty($dataHapus['berita']['gambar']) && file_exists('uploads/berita/' . $dataHapus['berita']['gambar'])) {
-                @unlink('uploads/berita/' . $dataHapus['berita']['gambar']);
-            }
+        $data['title'] = 'Edit Pengumuman';
+        $data['pengumuman'] = $pengumuman;
+        
+        // Hapus logika 'parent_id'
+        
+        // 12. Ganti path view
+        return $this->view('pengumuman/pengumuman-form', $data);
+    }
 
-            // 2. Hapus file gambar tambahan
-            foreach ($dataHapus['gambar_tambahan'] as $img) {
-                if (!empty($img['nama_file']) && file_exists('uploads/berita/' . $img['nama_file'])) {
-                    @unlink('uploads/berita/' . $img['nama_file']);
+    public function update($id)
+    {
+        $pengumuman = $this->pengumumanModel->getById($id);
+        if (!$pengumuman) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('Pengumuman tidak ditemukan');
+        }
+
+        $slug = url_title($this->request->getPost('judul'), '-', true);
+        $data = [
+            'judul' => $this->request->getPost('judul'),
+            'slug' => $slug,
+            'konten' => $this->request->getPost('konten'),
+            'status' => $this->request->getPost('status') ?: 'publish',
+        ];
+
+        // 13. Handle Update Gambar
+        $gambarFile = $this->request->getFile('gambar');
+        if ($gambarFile && $gambarFile->isValid() && !$gambarFile->hasMoved()) {
+            $gambarName = $gambarFile->getRandomName();
+            if ($gambarFile->move($this->uploadPathGambar, $gambarName)) {
+                // Hapus gambar lama
+                if (!empty($pengumuman['gambar']) && file_exists($this->uploadPathGambar . $pengumuman['gambar'])) {
+                    @unlink($this->uploadPathGambar . $pengumuman['gambar']);
                 }
+                $data['gambar'] = $gambarName;
             }
+        }
+        
+        // 14. Handle Update PDF
+        $pdfFile = $this->request->getFile('file_pdf');
+        if ($pdfFile && $pdfFile->isValid() && !$pdfFile->hasMoved()) {
+            $pdfName = $pdfFile->getRandomName();
+            if ($pdfFile->move($this->uploadPathPdf, $pdfName)) {
+                // Hapus file pdf lama
+                if (!empty($pengumuman['file_pdf']) && file_exists($this->uploadPathPdf . $pengumuman['file_pdf'])) {
+                    @unlink($this->uploadPathPdf . $pengumuman['file_pdf']);
+                }
+                $data['file_pdf'] = $pdfName;
+            }
+        }
+
+        $this->pengumumanModel->update($id, $data);
+
+        return redirect()->to(base_url('pengumuman/edit/' . $id))->with('message', ['status' => 'ok', 'message' => 'Pengumuman berhasil diperbarui']);
+    }
+
+    public function delete()
+    {
+        if ($this->request->getPost('id')) {
+            $id = $this->request->getPost('id');
+            $pengumuman = $this->pengumumanModel->getById($id);
             
-            // 3. Hapus data dari database menggunakan Model
-            //    Model akan menghapus dari tabel 'berita' dan 'berita_gambar'
-            if ($this->beritaModel->hapusBeritaDanGambar($id)) {
-                return redirect()->back()->with('success', 'Berita berhasil dihapus!');
-            } else {
-                return redirect()->back()->with('error', 'Gagal menghapus data dari database.');
-            }
-
-        }
-        return redirect()->back()->with('error', 'Berita tidak ditemukan!');
-    }
-
-    /**
-     * Helper method untuk menghapus file gambar LAMA saat edit.
-     * UBAH: Nama dan logic sedikit diubah agar lebih jelas
-     */
-    private function hapusFileGambarLama(int $id, string $folder = 'uploads/berita')
-    {
-        // UBAH: Ambil data dari Model
-        $record = $this->beritaModel->find($id); // find() hanya ambil data tabel utama
-        
-        if ($record && !empty($record['gambar'])) { // 'gambar' karena returnType array
-            $filePath = FCPATH . $folder . DIRECTORY_SEPARATOR . $record['gambar'];
-            if (file_exists($filePath)) {
-                @unlink($filePath);
+            if ($pengumuman) {
+                // 15. Hapus file-file
+                if (!empty($pengumuman['gambar']) && file_exists($this->uploadPathGambar . $pengumuman['gambar'])) {
+                    @unlink($this->uploadPathGambar . $pengumuman['gambar']);
+                }
+                if (!empty($pengumuman['file_pdf']) && file_exists($this->uploadPathPdf . $pengumuman['file_pdf'])) {
+                    @unlink($this->uploadPathPdf . $pengumuman['file_pdf']);
+                }
+                
+                $this->pengumumanModel->delete($id);
+                return redirect()->to(base_url('pengumuman'))->with('message', ['status' => 'ok', 'message' => 'Pengumuman berhasil dihapus']);
             }
         }
+        return redirect()->to(base_url('pengumuman'))->with('message', ['status' => 'error', 'message' => 'Gagal menghapus pengumuman']);
     }
-
-    // HAPUS: Fungsi hapusFileGambar lama tidak terpakai
-    // private function hapusFileGambar(string $table, int $id, string $field, string $folder = 'uploads/berita') { ... }
 }
