@@ -26,10 +26,8 @@
                 <?php
                 helper('html');
                 
-                // Hapus: Fungsi rekursif display_page_rows()
                 
                 $no = 1;
-                // $halaman_list diisi dari Controller yang sudah dirubah
                 if (!empty($halaman_list)) { 
                     foreach ($halaman_list as $val) {
                         
@@ -37,8 +35,7 @@
                         if (!empty($val['foto'])) {
                             $foto_display = '<img src="'.base_url('public/uploads/halaman/' . $val['foto']).'" style="width: 60px; height: 60px; object-fit: cover;"/>';
                         }
-                        
-                        // Tampilkan baris tabel
+
                         echo '<tr>
                             <td>' . $no . '</td>
                             <td>' . $foto_display . '</td>

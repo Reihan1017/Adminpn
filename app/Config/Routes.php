@@ -44,26 +44,33 @@ $routes->group('tentangpengadilan', function($routes) {
     $routes->get('hapusProfil/(:num)', 'Tentangpengadilan::hapusProfil/$1');
 });
 
-// ROUTES UNTUK BERITA (GRUP BARU)
+// ROUTES UNTUK BERITA
 //======================================================================
-// URL akan menjadi /berita, /berita/form, /berita/simpan, dll.
 $routes->group('berita', function($routes){
-    $routes->get('/', 'Berita::beritaTerkini'); // Halaman utama berita
-    $routes->get('form/(:num?)', 'Berita::formBerita/$1');
-    $routes->post('simpan', 'berita::simpanBerita');
+    // Halaman utama berita (URL: /berita)
+    $routes->get('/', 'Berita::beritaTerkini'); 
+    
+    // Rute untuk TAMBAH (URL: /berita/form)
+    $routes->get('form', 'Berita::formBerita'); 
+    
+    // Rute untuk EDIT (URL: /berita/form/123)
+    $routes->get('form/(:num)', 'Berita::formBerita/$1'); 
+    
+    // Rute untuk SIMPAN (method POST)
+    $routes->post('simpan', 'Berita::simpanBerita');
+    
+    // Rute untuk HAPUS (URL: /berita/hapus/123)
     $routes->get('hapus/(:num)', 'Berita::hapusBerita/$1');
 });
 
 //======================================================================
-// ROUTES UNTUK PENGUMUMAN (TIDAK ADA BERITA LAGI DI SINI)
+// ROUTES UNTUK PENGUMUMAN 
 //======================================================================
 $routes->group('pengumuman', function($routes){
-    // Rute beritaTerkini, formBerita, simpanBerita, hapusBerita
-    // SUDAH DIPINDAHKAN KE GRUP 'berita' DI ATAS
 });
 
 // Anda juga perlu rute untuk API upload gambar TinyMCE
-$routes->post('api/uploadImage', 'Api::uploadImage'); // Pastikan controller Api dan method uploadImage ada
+$routes->post('api/uploadImage', 'Api::uploadImage'); 
 
 // --- CRUD UNTUK PENGUMUMAN ---
 // URL akan menjadi /pengumuman, /pengumuman/create, dll.

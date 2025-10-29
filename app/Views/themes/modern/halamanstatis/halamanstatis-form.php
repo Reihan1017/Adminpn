@@ -7,17 +7,13 @@
         <?php
         helper('html');
 
-        // PASTIKAN PESAN (MESSAGE) DITAMPILKAN
         if (!empty($message)) {
             show_message($message);
         }
 
-        // --- INI ADALAH PERBAIKAN UTAMA ---
-        // Variabel $formAction harus didefinisikan
         $formAction = isset($halaman['id'])
             ? base_url('halamanstatis/update/' . $halaman['id'])
             : base_url('halamanstatis/store');
-        // --- AKHIR PERBAIKAN UTAMA ---
 
         ?>
 
@@ -40,11 +36,9 @@
 
                 <div class="col-md-4">
                     
-                    <!-- PENGATURAN DATA -->
                     <div class="card card-body mb-3">
                         <h6 class="mb-3">Pengaturan Data</h6>
-                        
-                        <!-- FIELD LABEL BARU -->
+
                         <div class="mb-3">
                             <label class="control-label mb-2">Label Pencarian</label>
                             <input class="form-control" type="text" name="label"
@@ -52,7 +46,6 @@
                             <small>Contoh: 'kontak-kami', 'footer-kolom-1'.</small>
                         </div>
                     </div>
-                    <!-- AKHIR PENGATURAN DATA -->
 
 
                     <div class="card card-body mb-3">

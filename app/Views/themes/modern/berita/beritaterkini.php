@@ -24,10 +24,10 @@
                 <h5 class="card-title mb-0">Manajemen Berita</h5>
             </div>
             <div class="col-auto">
-                <a href="<?= site_url('pengumuman/formBerita') ?>" class="btn btn-success rounded-pill">
+                <a href="<?= site_url('berita/form') ?>" class="btn btn-success rounded-pill">
                     <i class="fas fa-plus mr-1"></i> Tambah Berita
                 </a>
-            </div>
+                </div>
         </div>
     </div>
 
@@ -73,13 +73,13 @@
                     </td>
                     
                     <td class="text-center align-middle">
-                        <a href="<?= site_url('pengumuman/formBerita/' . ($berita['id'] ?? '')) ?>" class="btn btn-sm btn-info rounded-pill px-3 mr-1" title="Edit">
+                        <a href="<?= site_url('berita/form/' . ($berita['id'] ?? '')) ?>" class="btn btn-sm btn-info rounded-pill px-3 mr-1" title="Edit">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
-                        <a href="<?= site_url('pengumuman/hapusBerita/' . ($berita['id'] ?? '')) ?>" class="btn btn-sm btn-danger rounded-pill px-3 btn-hapus" title="Hapus">
+                        <a href="<?= site_url('berita/hapus/' . ($berita['id'] ?? '')) ?>" class="btn btn-sm btn-danger rounded-pill px-3 btn-hapus" title="Hapus">
                             <i class="fas fa-trash-alt"></i>
                         </a>
-                    </td>
+                        </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php else: ?>
@@ -87,7 +87,7 @@
                         <td colspan="6" class="text-center text-muted py-3">Belum ada data berita.</td>
                     </tr>
                 <?php endif; ?>
-        </tbody>
+            </tbody>
         </table>
     </div>
 </div>

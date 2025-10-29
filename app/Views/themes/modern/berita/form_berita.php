@@ -11,7 +11,7 @@
            <h5 class="card-title mb-0 text-primary"><i class="fas fa-edit mr-2"></i><?= esc($current_module['judul_module'] ?? 'Form Berita') ?></h5>
     </div>
     <div class="card-body">
-        <form id="formBerita" action="<?= site_url('pengumuman/simpanBerita') ?>" method="post" enctype="multipart/form-data">
+        <form id="formBerita" action="<?= site_url('berita/simpan') ?>" method="post" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= esc($berita['id'] ?? '') ?>">
 
@@ -115,7 +115,7 @@
             <hr class="my-4">
 
             <div class="text-right">
-                <a href="<?= site_url('pengumuman/beritaTerkini') ?>" class="btn btn-outline-secondary rounded-pill px-4 mr-2">
+                <a href="<?= site_url('berita') ?>" class="btn btn-outline-secondary rounded-pill px-4 mr-2">
                     <i class="fas fa-times mr-1"></i> Batal
                 </a>
                 <button type="submit" class="btn btn-primary rounded-pill px-4">
@@ -127,7 +127,6 @@
 </div>
 
 <style>
-/* CSS dari sebelumnya tetap dipertahankan */
 .drop-zone { 
     border: 2px dashed #adb5bd; border-radius: .25rem; padding: 25px; text-align: center; 
     transition: background-color 0.2s ease, border-color 0.2s ease; cursor: pointer; 
@@ -199,8 +198,8 @@
 
 #preview-utama .img-thumbnail {
     max-height: 150px;
-    width: auto; /* Biarkan lebarnya menyesuaikan */
-    object-fit: contain; /* Ubah ini */
+    width: auto; 
+    object-fit: contain;
     display: block;
     margin: 0 auto; /* Tengah secara horizontal jika perlu */
 }
@@ -209,7 +208,7 @@
 #preview-tambahan .img-thumbnail {
     height: 100px; /* Tingginya bisa disesuaikan */
     width: 100%;
-    object-fit: contain; /* Ubah ini */
+    object-fit: contain; 
 }
 
 /* Style untuk tombol hapus (X) */
@@ -249,14 +248,12 @@
         selector: 'textarea#isi_berita', height: 500,
         plugins: 'advlist autolink lists link image charmap print preview anchor searchreplace visualblocks code fullscreen insertdatetime media table paste code help wordcount image',
         toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image media | help',
-        images_upload_url: '<?= site_url('api/uploadImage') ?>', // PASTIKAN URL INI BENAR
+        images_upload_url: '<?= site_url('api/uploadImage') ?>', 
         automatic_uploads: true, file_picker_types: 'image', paste_data_images: true,
-        // HAPUS file_picker_callback JIKA ADA
     });
 
     document.getElementById('formBerita').addEventListener('submit', function(e) {
         tinymce.triggerSave();
-        // Saat submit, kita perlu memastikan input file berisi file yang benar dari fileStore
         syncFileInputs(); 
     });
 
@@ -322,7 +319,7 @@
 
 
             filesToPreview.forEach((file, index) => {
-                if (!file || !file.type.startsWith('image/')) { return; } // Pastikan file valid
+                if (!file || !file.type.startsWith('image/')) { return; } 
 
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -391,7 +388,7 @@
     }
 
 
-    // Fungsi setup Drop Zone (diperbarui untuk fileStore)
+    // Fungsi setup Drop Zone
     function setupDropZone(dropZoneId, inputId) {
         const dropZone = document.getElementById(dropZoneId);
         const fileInput = document.getElementById(inputId);
@@ -469,7 +466,6 @@
         updateCustomFileInputLabel('gambar', fileStore.gambar ? [fileStore.gambar] : []);
         updateCustomFileInputLabel('gambar_tambahan', fileStore.gambar_tambahan);
 
-        // --- (Kode SweetAlert untuk hapus gambar galeri LAMA dari DB via AJAX, jika ada) ---
     });
 
 </script>

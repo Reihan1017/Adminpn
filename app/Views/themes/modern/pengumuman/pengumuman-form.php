@@ -8,11 +8,9 @@
         helper('html');
 
         if (!empty($message)) {
-            // Gunakan show_message() dari HalamanStatis
             show_message($message);
         }
 
-        // Sesuaikan formAction
         $formAction = isset($pengumuman['id'])
             ? base_url('pengumuman/update/' . $pengumuman['id'])
             : base_url('pengumuman/store');
@@ -43,7 +41,6 @@
                         <div class="mb-3">
                             <label class="control-label mb-2">Tanggal Terbit</LabeL>
                             <?php
-                            // Ambil tgl_terbit, jika kosong, set ke hari ini
                             $tgl_terbit = @$pengumuman['tgl_terbit'] ?: date('Y-m-d H:i:s');
                             ?>
                             <input class="form-control flatpickr" type="text" name="tgl_terbit" value="<?= set_value('tgl_terbit', date('Y-m-d H:i', strtotime($tgl_terbit))) ?>" required/>

@@ -92,8 +92,7 @@
     $(document).ready(function () {
         $('#dataTable').DataTable({ "order": [[ 4, "asc" ], [ 0, "asc" ]] }); // Urutkan berdasarkan Kategori, lalu Urutan
     });
-       // SweetAlert untuk konfirmasi hapus (pastikan class .btn-hapus ada di tombol hapus)
-       $('#dataTable').on('click', '.btn-hapus', function(e) { // Gunakan event delegation
+       $('#dataTable').on('click', '.btn-hapus', function(e) { 
             e.preventDefault();
             const href = $(this).attr('href');
             Swal.fire({

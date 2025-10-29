@@ -5,7 +5,6 @@
     <div class="card-body">
         <?php
         if (!empty($message)) {
-            // Menggunakan show_message() dari HalamanStatis
             show_message($message);
         } ?>
 

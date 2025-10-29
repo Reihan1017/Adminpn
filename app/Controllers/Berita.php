@@ -73,7 +73,7 @@ class Berita extends BaseController
             if ($pageData['berita']) {
                 $pageData['current_module']['judul_module'] = 'Edit Berita & Artikel';
             } else {
-                return redirect()->to('/pengumuman/beritaTerkini')->with('error', 'Berita tidak ditemukan.');
+                return redirect()->to('/berita/beritaTerkini')->with('error', 'Berita tidak ditemukan.');
             }
         } else {
             $pageData['current_module']['judul_module'] = 'Tambah Berita & Artikel Baru';
@@ -208,7 +208,7 @@ class Berita extends BaseController
             }
         }
 
-        return redirect()->to('/pengumuman/beritaTerkini')->with('success', 'Data berita berhasil disimpan!');
+        return redirect()->to('/berita/beritaTerkini')->with('success', 'Data berita berhasil disimpan!');
     }
 
     /**

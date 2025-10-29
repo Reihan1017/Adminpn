@@ -50,17 +50,14 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // 1. Tangkap semua tombol yang memiliki class '.btn-hapus'
     const deleteButtons = document.querySelectorAll('.btn-hapus');
 
     deleteButtons.forEach(button => {
         button.addEventListener('click', function (event) {
-            // 2. Hentikan aksi default link agar tidak langsung pindah halaman
             event.preventDefault(); 
             
-            const deleteUrl = this.getAttribute('href'); // Ambil URL hapus dari link
+            const deleteUrl = this.getAttribute('href'); 
 
-            // 3. Tampilkan konfirmasi SweetAlert2
             Swal.fire({
                 title: 'Apakah Anda yakin?',
                 text: "Data yang sudah dihapus tidak dapat dikembalikan!",
@@ -71,9 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 confirmButtonText: 'Ya, hapus!',
                 cancelButtonText: 'Batal'
             }).then((result) => {
-                // 4. Jika pengguna menekan tombol "Ya, hapus!"
                 if (result.isConfirmed) {
-                    // Arahkan browser ke URL hapus
                     window.location.href = deleteUrl;
                 }
             });
